@@ -50,6 +50,7 @@ const InputUID = ({
 }) => {
   const { modifiedData, initialData } = useDataManager();
   const [isLoading, setIsLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState('');
   const [availability, setAvailability] = useState(null);
   const [isSuggestionOpen, setIsSuggestionOpen] = useState(true);
   const [isCustomized, setIsCustomized] = useState(false);
@@ -61,7 +62,7 @@ const InputUID = ({
   const initialValue = initialData[name];
   const isCreation = isEmpty(initialData);
 
-  generateUid.current = async () => {
+  generateUid.current = async (triggerOnChange = true) => {
     setIsLoading(true);
     const requestURL = getRequestUrl('explorer/uid/generate');
     try {
@@ -73,7 +74,13 @@ const InputUID = ({
           data: modifiedData,
         },
       });
-      onChange({ target: { name, value: data, type: 'text' } });
+
+      if (triggerOnChange && data !== suggestion) {
+        onChange({ target: { name, value: data, type: 'text' } });
+      } else {
+        setSuggestion(data);
+      }
+
       setIsLoading(false);
     } catch (err) {
       console.error({ err });
@@ -107,7 +114,7 @@ const InputUID = ({
 
   useEffect(() => {
     if (!value && required) {
-      generateUid.current();
+      generateUid.current(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -144,7 +151,7 @@ const InputUID = ({
 
   useEffect(() => {
     if (!isCustomized && isCreation && debouncedTargetFieldValue !== null) {
-      generateUid.current();
+      generateUid.current(false);
     }
   }, [debouncedTargetFieldValue, isCustomized, isCreation]);
 
@@ -212,7 +219,7 @@ const InputUID = ({
                 type="text"
                 onBlur={onBlur}
                 // eslint-disable-next-line no-irregular-whitespace
-                value={value || ''}
+                value={value || suggestion}
               />
               <RightContent>
                 <RightLabel availability={availability} label={label} />
