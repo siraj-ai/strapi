@@ -107,6 +107,7 @@ const InputUID = ({
 
   useEffect(() => {
     if (!value && required) {
+      console.log('e');
       generateUid.current();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

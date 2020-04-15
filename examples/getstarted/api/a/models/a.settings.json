@@ -1,0 +1,18 @@
+{
+  "kind": "singleType",
+  "collectionName": "as",
+  "info": {
+    "name": "a"
+  },
+  "options": {
+    "increments": true,
+    "timestamps": true
+  },
+  "attributes": {
+    "d": {
+      "type": "component",
+      "repeatable": true,
+      "component": "default.dish"
+    }
+  }
+}

@@ -1,18 +1,16 @@
 /* eslint-disable import/no-cycle */
 import React, { useReducer } from 'react';
-import { useDrop } from 'react-dnd';
 import PropTypes from 'prop-types';
 import { get, take } from 'lodash';
 import { FormattedMessage } from 'react-intl';
 import { ErrorMessage } from '@buffetjs/styles';
 import pluginId from '../../pluginId';
 import useDataManager from '../../hooks/useDataManager';
-import ItemTypes from '../../utils/ItemTypes';
 import Button from './AddFieldButton';
-import DraggedItem from './DraggedItem';
 import EmptyComponent from './EmptyComponent';
 import init from './init';
 import reducer, { initialState } from './reducer';
+import RepeatableComponentList from './RepeatableComponentList';
 
 const RepeatableComponent = ({
   componentUid,
@@ -26,7 +24,6 @@ const RepeatableComponent = ({
   schema,
 }) => {
   const { addRepeatableComponentToField, formErrors } = useDataManager();
-  const [, drop] = useDrop({ accept: ItemTypes.COMPONENT });
 
   const componentErrorKeys = Object.keys(formErrors)
     .filter(errorKey => {
@@ -46,20 +43,33 @@ const RepeatableComponent = ({
     init(initialState, componentValue)
   );
   const { collapses } = state.toJS();
+  const missingComponentsValue = min - componentValueLength;
+  const errorsArray = componentErrorKeys.map(key => get(formErrors, [key, 'id'], ''));
+
+  const hasMinError =
+    get(errorsArray, [0], '').includes('min') && !collapses.some(obj => obj.isOpen === true);
+
+  const handleMoveCollapse = (dragIndex, hoverIndex) => {
+    dispatch({
+      type: 'MOVE_COLLAPSE',
+      dragIndex,
+      hoverIndex,
+    });
+  };
+
+  const handleRemoveCollapse = index => {
+    dispatch({
+      type: 'REMOVE_COLLAPSE',
+      index,
+    });
+  };
+
   const toggleCollapses = index => {
     dispatch({
       type: 'TOGGLE_COLLAPSE',
       index,
     });
   };
-  const missingComponentsValue = min - componentValueLength;
-  const errorsArray = componentErrorKeys.map(key =>
-    get(formErrors, [key, 'id'], '')
-  );
-
-  const hasMinError =
-    get(errorsArray, [0], '').includes('min') &&
-    !collapses.some(obj => obj.isOpen === true);
 
   return (
     <div>
@@ -70,52 +80,21 @@ const RepeatableComponent = ({
           </FormattedMessage>
         </EmptyComponent>
       )}
-      <div ref={drop}>
-        {componentValueLength > 0 &&
-          componentValue.map((data, index) => {
-            const componentFieldName = `${name}.${index}`;
-            const doesPreviousFieldContainErrorsAndIsOpen =
-              componentErrorKeys.includes(`${name}.${index - 1}`) &&
-              index !== 0 &&
-              get(collapses, [index - 1, 'isOpen'], false) === false;
-            const hasErrors = componentErrorKeys.includes(componentFieldName);
-
-            return (
-              <DraggedItem
-                fields={fields}
-                componentFieldName={componentFieldName}
-                doesPreviousFieldContainErrorsAndIsOpen={
-                  doesPreviousFieldContainErrorsAndIsOpen
-                }
-                hasErrors={hasErrors}
-                hasMinError={hasMinError}
-                isFirst={index === 0}
-                isOpen={get(collapses, [index, 'isOpen'], false)}
-                key={get(collapses, [index, '_temp__id'], null)}
-                onClickToggle={() => {
-                  // Close all other collapses and open the selected one
-                  toggleCollapses(index);
-                }}
-                removeCollapse={() => {
-                  dispatch({
-                    type: 'REMOVE_COLLAPSE',
-                    index,
-                  });
-                }}
-                moveCollapse={(dragIndex, hoverIndex) => {
-                  dispatch({
-                    type: 'MOVE_COLLAPSE',
-                    dragIndex,
-                    hoverIndex,
-                  });
-                }}
-                parentName={name}
-                schema={schema}
-                toggleCollapses={toggleCollapses}
-              />
-            );
-          })}
-      </div>
+      {componentValue && collapses && (
+        <RepeatableComponentList
+          componentValue={componentValue}
+          fields={fields}
+          isNested={isNested}
+          name={name}
+          schema={schema}
+          hasMinError={hasMinError}
+          componentErrorKeys={componentErrorKeys}
+          onMoveCollapse={handleMoveCollapse}
+          onRemoveCollapse={handleRemoveCollapse}
+          collapses={collapses}
+          toggleCollapses={toggleCollapses}
+        />
+      )}
       <Button
         hasMinError={hasMinError}
         withBorderRadius={false}
@@ -129,11 +108,7 @@ const RepeatableComponent = ({
           if (componentValueLength < max) {
             const shouldCheckErrors = hasMinError;
 
-            addRepeatableComponentToField(
-              name,
-              componentUid,
-              shouldCheckErrors
-            );
+            addRepeatableComponentToField(name, componentUid, shouldCheckErrors);
             dispatch({
               type: 'ADD_NEW_FIELD',
             });

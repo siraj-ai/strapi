@@ -90,7 +90,7 @@ const EditViewDataManagerProvider = ({ allLayoutData, children, redirectToPrevio
       contentTypeDataStructure,
     });
 
-    if (!isCreatingEntry) {
+    if (!isCreatingEntry || isSingleType) {
       fetchData();
     } else {
       // Will create default form
