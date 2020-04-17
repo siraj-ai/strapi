@@ -30,6 +30,8 @@ module.exports = async function createProject(scope, { connection, dependencies 
       })
     );
 
+    await trackUsage({ event: 'didCopyProjectFiles', scope });
+
     // copy templates
     await fse.writeJSON(
       join(rootPath, 'package.json'),
@@ -45,6 +47,8 @@ module.exports = async function createProject(scope, { connection, dependencies 
       }
     );
 
+    await trackUsage({ event: 'didWritePackageJSON', scope });
+
     // ensure node_modules is created
     await fse.ensureDir(join(rootPath, 'node_modules'));
 
@@ -54,10 +58,14 @@ module.exports = async function createProject(scope, { connection, dependencies 
         connection,
       })
     );
+
+    await trackUsage({ event: 'didCopyConfigurationFiles', scope });
   } catch (err) {
     await fse.remove(scope.rootPath);
     throw err;
   }
+
+  await trackUsage({ event: 'willInstallProjectDependencies', scope });
 
   const installPrefix = chalk.yellow('Installing dependencies:');
   const loader = ora(installPrefix).start();
@@ -81,6 +89,8 @@ module.exports = async function createProject(scope, { connection, dependencies 
 
     loader.stop();
     console.log(`Dependencies installed ${chalk.green('successfully')}.`);
+
+    await trackUsage({ event: 'didInstallProjectDependencies', scope });
   } catch (error) {
     loader.stop();
     await trackUsage({
